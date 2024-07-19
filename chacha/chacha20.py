@@ -69,7 +69,6 @@ class ChaCha20():
         stream     = struct.pack("<16L", *state)
         # XOR
         ciphertext = bytes([a ^ b for a, b in zip(stream, plaintext)])
-        print(len(ciphertext))
         # returning only size of plaintext
         return ciphertext
     
