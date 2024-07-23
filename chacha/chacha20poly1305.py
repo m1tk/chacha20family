@@ -86,7 +86,7 @@ class ChaCha20Poly1305():
 
 import binascii
 
-octet_string = """80 81 82 83 84 85 86 87 88 89 8a 8b 8c 8d 8e 8f 90 91 92 93 94 95 96 97 98 99 9a 9b 9c 9d 9e 9f"""
+octet_string = "80 81 82 83 84 85 86 87 88 89 8a 8b 8c 8d 8e 8f 90 91 92 93 94 95 96 97 98 99 9a 9b 9c 9d 9e 9f"
 octet_string = octet_string.replace(" ", "")
 key = bytes.fromhex(octet_string)
 octet_string = "07 00 00 00 40 41 42 43 44 45 46 47"
