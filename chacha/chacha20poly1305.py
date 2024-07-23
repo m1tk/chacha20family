@@ -82,6 +82,7 @@ class ChaCha20Poly1305():
 
         return cipher.decrypt(ciphertext)
 
+"""
 
 import binascii
 
@@ -100,3 +101,4 @@ plaintext = "Ladies and Gentlemen of the class of '99: If I could offer you only
 aead = ChaCha20Poly1305(key)
 k = aead.encrypt(nonce, plaintext.encode(), aad)
 print(aead.decrypt(nonce, k, aad).decode())
+"""
