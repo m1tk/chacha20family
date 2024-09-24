@@ -1,5 +1,5 @@
-from chacha20 import ChaCha20
-from poly1305 import poly1305_tag
+from chacha.chacha20 import ChaCha20
+from chacha.poly1305 import poly1305_tag
 import struct
 
 class ChaCha20Poly1305():
@@ -32,7 +32,6 @@ class ChaCha20Poly1305():
         cipher.block_counter = 1
 
         ciphertext = cipher.encrypt(plaintext)
-        print(binascii.hexlify(ciphertext).decode())
 
         # | aad | padding aad | ciphertext | padding cipher text | aad len 8 byte | cipher len 8 byte | tag 16 byte
 
@@ -43,26 +42,21 @@ class ChaCha20Poly1305():
         auth_msg  += struct.pack('<Q', len(aad))
         auth_msg  += struct.pack('<Q', len(ciphertext))
 
-        auth_msg  += poly1305_tag(auth_key, auth_msg)
+        tag        = poly1305_tag(auth_key, auth_msg)
 
-        return auth_msg
+        return ciphertext + tag
 
     def decrypt(self, nonce, ciphertext, aad=None):
         if len(nonce) != 12:
             raise ValueError("Nonce must be 96 bit long")
         if aad is None:
             aad = bytearray(0)
-        if len(ciphertext) < 32:
-            # we must have at least aad and ciphertext lengths and tag
+        if len(ciphertext) < 16:
+            # we must have at least ciphertext and tag
             return None
         
         msg_tag    = ciphertext[-16:]
-        size_cip   = int.from_bytes(ciphertext[-24:-16], byteorder='little')
-        size_aad   = int.from_bytes(ciphertext[-32:-24], byteorder='little')
-        print(size_cip)
-        size_pad   = 16-(size_cip%16)
-        ciphertext = ciphertext[(-(32+size_pad+size_cip)):-(32+size_pad)]
-        print(binascii.hexlify(ciphertext).decode())
+        ciphertext = ciphertext[:-16]
 
         auth_key = self.poly1305_keygen(self.key, nonce)
 
