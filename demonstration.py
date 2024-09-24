@@ -1,9 +1,10 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QTextEdit, QLineEdit, QPushButton, QHBoxLayout, QMessageBox
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QTextEdit, QLineEdit, QPushButton, QHBoxLayout, QMessageBox, QComboBox
 import json
 from base64 import b64encode, b64decode
-from Crypto.Cipher import ChaCha20
+from Crypto.Cipher import ChaCha20, ChaCha20_Poly1305
 import os
 import hashlib
+from chacha import chacha20, xchacha20, chacha20poly1305
 
 class EncryptionApp(QWidget):
     def __init__(self):
@@ -40,6 +41,21 @@ class EncryptionApp(QWidget):
 
         self.layout.addLayout(button_layout)
         
+        select_layout = QHBoxLayout()
+
+        self.select_enc = QComboBox()
+        self.select_enc.addItems([
+            "chacha20",
+            "xchacha20",
+            "chacha20poly1305",
+            "chacha20 (own implementation)",
+            "xchacha20 (own implementation)",
+            "chacha20poly1305 (own implementation)"
+        ])
+        select_layout.addWidget(self.select_enc)
+        self.layout.addLayout(select_layout)
+
+        
         self.setLayout(self.layout)
 
     def get_key(self):
@@ -50,15 +66,41 @@ class EncryptionApp(QWidget):
     
     def encrypt_text(self):
         plaintext = self.text_input.toPlainText().encode()
-        print(plaintext[0])
         key       = self.get_key()
         if plaintext:
-            nonce      = os.urandom(12)
-            cipher     = ChaCha20.new(key=key, nonce=nonce)
-            ciphertext = cipher.encrypt(plaintext)
-            nonce_b64  = b64encode(nonce).decode('utf-8')
-            ct_b64     = b64encode(ciphertext).decode('utf-8')
-            result     = json.dumps({'nonce': nonce_b64, 'ciphertext': ct_b64})
+            res = {}
+            enc_type = self.select_enc.currentText()
+            if enc_type == "chacha20":
+                nonce      = os.urandom(12)
+                cipher     = ChaCha20.new(key=key, nonce=nonce)
+                ciphertext = cipher.encrypt(plaintext)
+            elif enc_type == "xchacha20":
+                nonce      = os.urandom(24)
+                cipher     = ChaCha20.new(key=key, nonce=nonce)
+                ciphertext = cipher.encrypt(plaintext)
+            elif enc_type == "chacha20poly1305":
+                cipher          = ChaCha20_Poly1305.new(key=key)
+                cipher.update(b"header")
+                ciphertext, tag = cipher.encrypt_and_digest(plaintext)
+                ciphertext      = ciphertext + tag
+                nonce           = cipher.nonce
+            elif enc_type == "chacha20 (own implementation)":
+                nonce      = os.urandom(12)
+                cipher     = chacha20.ChaCha20(key, nonce)
+                ciphertext = cipher.encrypt(plaintext)
+            elif enc_type == "xchacha20 (own implementation)":
+                nonce      = os.urandom(24)
+                cipher     = xchacha20.XChaCha20(key, nonce)
+                ciphertext = cipher.encrypt(plaintext)
+            else:
+                cipher     = chacha20poly1305.ChaCha20Poly1305(key)
+                nonce      = os.urandom(12)
+                ciphertext = cipher.encrypt(nonce, plaintext, aad=b"header")
+
+
+            res["nonce"] = b64encode(nonce).decode('utf-8')
+            res["ciphertext"] = b64encode(ciphertext).decode('utf-8')
+            result = json.dumps(res)
             self.text_output.setText(result)
         else:
             self.show_error_message("Error", "Input must not be empty!")
@@ -70,11 +112,31 @@ class EncryptionApp(QWidget):
             b64        = json.loads(json_input)
             nonce      = b64decode(b64['nonce'])
             ciphertext = b64decode(b64['ciphertext'])
-            cipher     = ChaCha20.new(key=key, nonce=nonce)
-            plaintext  = cipher.decrypt(ciphertext)
+
+            enc_type = self.select_enc.currentText()
+            if enc_type == "chacha20":
+                cipher     = ChaCha20.new(key=key, nonce=nonce)
+                plaintext  = cipher.decrypt(ciphertext)
+            elif enc_type == "xchacha20":
+                cipher     = ChaCha20.new(key=key, nonce=nonce)
+                plaintext  = cipher.decrypt(ciphertext)
+            elif enc_type == "chacha20poly1305":
+                cipher    = ChaCha20_Poly1305.new(key=key, nonce=nonce)
+                cipher.update(b"header")
+                plaintext = cipher.decrypt_and_verify(ciphertext[:-16], ciphertext[-16:])
+            elif enc_type == "chacha20 (own implementation)":
+                cipher    = chacha20.ChaCha20(key, nonce)
+                plaintext = cipher.decrypt(ciphertext)
+            elif enc_type == "xchacha20 (own implementation)":
+                cipher    = xchacha20.XChaCha20(key, nonce)
+                plaintext = cipher.decrypt(ciphertext)
+            else:
+                cipher    = chacha20poly1305.ChaCha20Poly1305(key)
+                plaintext = cipher.decrypt(nonce, ciphertext, aad=b"header")
+
             self.text_input.setText(plaintext.decode())
         except (ValueError, KeyError) as e:
-            self.show_error_message("Error", "Incorrect key:")
+            self.show_error_message("Error", f"Incorrect key: {e}")
 
     def show_error_message(self, title, message):
         msg = QMessageBox()
