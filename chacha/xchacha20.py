@@ -1,7 +1,7 @@
 import numpy as np
 import struct
 import binascii
-from chacha20 import ChaCha20
+from chacha.chacha20 import ChaCha20
 
 def chunked(size, source):
     for i in range(0, len(source), size):
@@ -15,7 +15,6 @@ class XChaCha20():
         self.key = HChaCha20(key, nonce[0:16]).get_state()
         self.nonce = b"\x00\x00\x00\x00" + nonce[16:24]
         self.ChaCha20 = ChaCha20(self.key,self.nonce)
-        self.ChaCha20.block_counter = 1
 
     def encrypt(self, plaintext):
         return self.ChaCha20.encrypt(plaintext)
