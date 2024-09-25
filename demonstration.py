@@ -1,10 +1,11 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QTextEdit, QLineEdit, QPushButton, QHBoxLayout, QMessageBox, QComboBox
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QTextEdit, QLineEdit, QPushButton, QHBoxLayout, QMessageBox, QComboBox, QPushButton, QFileDialog
 import json
 from base64 import b64encode, b64decode
 from Crypto.Cipher import ChaCha20, ChaCha20_Poly1305
 import os
 import hashlib
 from chacha import chacha20, xchacha20, chacha20poly1305
+import struct
 
 class EncryptionApp(QWidget):
     def __init__(self):
@@ -15,12 +16,36 @@ class EncryptionApp(QWidget):
         
         self.input_label = QLabel("Input:")
         self.layout.addWidget(self.input_label)
+
+        in_file_layout = QHBoxLayout()
+
+        self.input_load_btn = QPushButton('Load from file')
+        self.input_load_btn.clicked.connect(self.read_input_file)
+        in_file_layout.addWidget(self.input_load_btn)
+
+        self.input_save_btn = QPushButton('Save to file')
+        self.input_save_btn.clicked.connect(self.write_input_file)
+        in_file_layout.addWidget(self.input_save_btn)
+
+        self.layout.addLayout(in_file_layout)
         
         self.text_input = QTextEdit()
         self.layout.addWidget(self.text_input)
 
         self.output_label = QLabel("Output:")
         self.layout.addWidget(self.output_label)
+
+        out_file_layout = QHBoxLayout()
+
+        self.output_load_btn = QPushButton('Load from file')
+        self.output_load_btn.clicked.connect(self.read_out_file)
+        out_file_layout.addWidget(self.output_load_btn)
+
+        self.output_save_btn = QPushButton('Save to file')
+        self.output_save_btn.clicked.connect(self.write_out_file)
+        out_file_layout.addWidget(self.output_save_btn)
+        
+        self.layout.addLayout(out_file_layout)
         
         self.text_output = QTextEdit()
         self.layout.addWidget(self.text_output)
@@ -57,6 +82,74 @@ class EncryptionApp(QWidget):
 
         
         self.setLayout(self.layout)
+
+    def read_input_file(self):
+        file = self.show_file_picker_dialog()
+        if file:
+            try:
+                with open(file, 'r') as file:
+                    # Read the entire contents of the file
+                    content = file.read()
+                    self.text_input.setText(content)
+            except Exception as e:
+                self.show_error_message("Error", f"Failed loading file: {e}")
+
+    def write_input_file(self):
+        file = self.show_file_saver_dialog()
+        if file:
+            try:
+                with open(file, 'w') as file:
+                    plaintext = self.text_input.toPlainText()
+                    file.write(plaintext)
+            except Exception as e:
+                self.show_error_message("Error", f"Failed writing to file: {e}")
+
+    def read_out_file(self):
+        file = self.show_file_picker_dialog()
+        if file:
+            try:
+                with open(file, 'rb') as file:
+                    data = file.read(1)
+                    nonce_len = int(struct.unpack('B', data)[0])
+                    nonce = file.read(nonce_len)
+                    ciphertext = file.read()
+
+                res = {"nonce": b64encode(nonce).decode('utf-8'), "ciphertext": b64encode(ciphertext).decode('utf-8')}
+                result = json.dumps(res)
+                self.text_output.setText(result)
+            except Exception as e:
+                self.show_error_message("Error", f"Failed loading file: {e}")
+
+    def write_out_file(self):
+        file = self.show_file_saver_dialog()
+        if file:
+            try:
+                json_input = self.text_output.toPlainText().encode()
+                b64        = json.loads(json_input)
+                nonce      = b64decode(b64['nonce'])
+                ciphertext = b64decode(b64['ciphertext'])
+            except Exception as e:
+                self.show_error_message("Error", f"No output to save")
+
+            try:
+                with open(file, 'wb') as file:
+                    file.write(struct.pack('B', len(nonce)))
+                    file.write(nonce)
+                    file.write(ciphertext)
+            except Exception as e:
+                self.show_error_message("Error", f"Failed writing to file: {e}")
+            
+
+    def show_file_picker_dialog(self):
+        options = QFileDialog.Options()
+        fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files (*);;Text Files (*.txt)", options=options)
+        return fileName
+
+    def show_file_saver_dialog(self):
+        options = QFileDialog.Options()
+        fileName, _ = QFileDialog.getSaveFileName(self, "Save File", "", "Text Files (*.txt);;All Files (*)", options=options)
+        return fileName
+
 
     def get_key(self):
         key       = self.key.text().encode()
