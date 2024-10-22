@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QLabel, QTextEdit, QLineEdit, QPushButton, QHBoxLayout, QMessageBox, QComboBox, QPushButton, QFileDialog, QTabWidget, QWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QLabel, QTextEdit, QLineEdit, QPushButton, QHBoxLayout, QMessageBox, QComboBox, QPushButton, QFileDialog, QTabWidget, QWidget, QSizePolicy
 import json
 from base64 import b64encode, b64decode
 from Crypto.Cipher import ChaCha20, ChaCha20_Poly1305
@@ -103,33 +103,41 @@ class InputEnc(QWidget):
 
 
         self.layout1 = QVBoxLayout(self)
-        self.layout1.setSpacing(0)
 
         self.input_label1 = QLabel("Input File:")
+        self.input_label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.layout1.addWidget(self.input_label1)
         self.in_file1 = QLabel("None")
+        self.in_file1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.layout1.addWidget(self.in_file1)
 
         in_file_layout1 = QHBoxLayout()
 
         self.input_load_btn1 = QPushButton('Load from file')
+        self.input_load_btn1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.input_load_btn1.clicked.connect(partial(self.read_file, self.in_file1, False))
         in_file_layout1.addWidget(self.input_load_btn1)
 
         self.layout1.addLayout(in_file_layout1)
 
         self.out_label1 = QLabel("Output File:")
+        self.out_label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.layout1.addWidget(self.out_label1)
         self.out_file1 = QLabel("None")
+        self.out_file1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.layout1.addWidget(self.out_file1)
 
         out_file_layout1 = QHBoxLayout()
 
         self.out_load_btn1 = QPushButton('Save to file')
+        self.out_load_btn1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.out_load_btn1.clicked.connect(partial(self.read_file, self.out_file1, True))
         out_file_layout1.addWidget(self.out_load_btn1)
 
         self.layout1.addLayout(out_file_layout1)
+
+        filler = QLabel("")
+        self.layout1.addWidget(filler)
 
         self.tab2.layout = self.layout1
         self.tab2.setLayout(self.tab2.layout)
@@ -208,7 +216,7 @@ class InputEnc(QWidget):
 
     def show_file_saver_dialog(self):
         options = QFileDialog.Options()
-        fileName, _ = QFileDialog.getSaveFileName(self, "Save File", "", "Text Files (*.txt);;All Files (*)", options=options)
+        fileName, _ = QFileDialog.getSaveFileName(self, "Save File", "", "All Files (*);;Text Files (*.txt)", options=options)
         return fileName
 
 
